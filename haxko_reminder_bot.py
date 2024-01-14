@@ -15,7 +15,7 @@ NOTIFICTAION_PERIOD = 3 # Time period in days from which notification is to be s
 # NOTE: This script can easily be tested by adding or subtracting a timedelta to/from today:
 # NOTE: Before some of the test runs, the file bot_storage must be deleted since its content probably prevents the execution of the program.
 # TODO: Anhand eines Vergleichs des errechneten Meeting-Tages mit dem aktuellen Tag zusätzlich ein "(übermorgen)", "(morgen)" oder "(heute)" ausgeben.
-today: datetime.datetime = datetime.datetime.today() + datetime.timedelta(days=17)
+today: datetime.datetime = datetime.datetime.today() + datetime.timedelta(days=10)
 print(f"today = {today}")
 today_weekday: int = today.weekday()
 in_three_days: datetime.datetime = today + datetime.timedelta(days=3)
@@ -77,7 +77,8 @@ def write_msg(meeting_day: str, next_appointment: datetime.datetime) -> None:
     with open("chat_id.txt", "r") as f:
         chat_id = f.readline().strip()
     meeting_date: str = next_appointment.strftime("%Y-%m-%d")
-    text_str: str = f"Am {meeting_day}, dem {meeting_date} findet ab 18:00 Uhr wieder ein haxko-Treffen statt. Weitere Informationen unter https://haxko.space.\nThe next haxko meeting will take place on {meeting_day} {meeting_date} from 6 pm. More information at https://haxko.space."
+    meeting_day_en = "Friday" if meeting_day == "Freitag" else "Saturday"
+    text_str: str = f"Am {meeting_day}, dem {meeting_date} findet ab 18:00 Uhr wieder ein haxko-Treffen statt. Weitere Informationen unter https://haxko.space.\nThe next haxko meeting will take place on {meeting_day_en} {meeting_date} from 6 pm. More information at https://haxko.space."
     url = f"https://api.telegram.org/bot{api_token}/sendMessage?chat_id={chat_id}&text={text_str}"
     print(requests.get(url).json())
     db["message_written"] = True
