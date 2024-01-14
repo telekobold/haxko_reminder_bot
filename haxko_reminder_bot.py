@@ -1,31 +1,21 @@
 import shelve
 import datetime
+import requests
 
-# TODO: MIT-Lizenz hier rein packen
-
-# TODO: Die aktuelle Funktionalität nochmal refactoren und daraus den ersten Commit bauen
-
-# Versionieren:
-# 1. Version: Funktionierende Benachrichtigungs-Logik nur als Konsolenoutput (ohne Telegram-Post)
-# 2. Version: Telegram-Post
-# 3. Version: Weitere Funktionen, z.B. Telegram-Haxko-Eule
-
-# This script is written in such a way that it also works if it didn't run for any period of time.
+# This bot is written in such a way that it also works if it didn't run for any period of time.
 # Caution: datetime.datetime.today().weekday() returns values between 0 and 6, while datetime.datetime.today.day() returns values starting from 1.
-# TODO: Script als Cronjob eintragen
-# TODO: Script als Shell-Skript schreiben
 
 MONDAY: int = 0
 FRIDAY: int = 4
 SATURDAY: int = 5
-db: shelve.DbfilenameShelf = shelve.open("haxkotelebot_storage")
+db: shelve.DbfilenameShelf = shelve.open("bot_storage")
 
 NOTIFICTAION_PERIOD = 3 # Time period in days from which notification is to be sent
 
-# This script can easily be tested by adding or subtracting a timedelta to/from today:
-# Note: Before some of the test runs, the file haxkotelebot_storage must be deleted since its content probably prevents the execution of the program.
+# NOTE: This script can easily be tested by adding or subtracting a timedelta to/from today:
+# NOTE: Before some of the test runs, the file bot_storage must be deleted since its content probably prevents the execution of the program.
 # TODO: Anhand eines Vergleichs des errechneten Meeting-Tages mit dem aktuellen Tag zusätzlich ein "(übermorgen)", "(morgen)" oder "(heute)" ausgeben.
-today: datetime.datetime = datetime.datetime.today() + datetime.timedelta(days=10)
+today: datetime.datetime = datetime.datetime.today() + datetime.timedelta(days=17)
 print(f"today = {today}")
 today_weekday: int = today.weekday()
 in_three_days: datetime.datetime = today + datetime.timedelta(days=3)
@@ -41,17 +31,11 @@ def is_before_friday(day: datetime.datetime) -> bool:
 def is_in_notification_period(day: int) -> bool:
     potential_next_appointment_in: int = day - today.weekday()
     potential_next_appointment: datetime.datetime = today + datetime.timedelta(potential_next_appointment_in)
-    #print(f"day = {day}")
-    #print(f"potential_next_appointment_in = {potential_next_appointment_in}")
-    #print(f"potential_next_appointment = {potential_next_appointment}")
     if day == FRIDAY and potential_next_appointment_in <= NOTIFICTAION_PERIOD and is_friday(potential_next_appointment):
         return potential_next_appointment
     elif day == SATURDAY and potential_next_appointment_in <= NOTIFICTAION_PERIOD and is_saturday(potential_next_appointment):
         return potential_next_appointment
     return None
-
-#def is_in_notification_period(date: datetime.datetime) -> bool:
-#    return (date - today).days <= 3
 
 def is_friday(day: datetime.datetime) -> bool:
     return day.weekday() is FRIDAY
@@ -81,22 +65,27 @@ def check_and_write_msg() -> None:
         # Among other things, it must be checked whether the current time is before the meeting or at least on the same day as the meeting:
         if potential_next_appointment_fr is not None and is_even(curr_week) and today <= potential_next_appointment_fr:
             write_msg("Freitag", potential_next_appointment_fr)
-        #elif is_saturday(in_three_days): #and not is_even(curr_week):
         elif potential_next_appointment_sa is not None and not is_even(curr_week) and today < potential_next_appointment_sa:
             write_msg("Samstag", potential_next_appointment_sa)
 
 def write_msg(meeting_day: str, next_appointment: datetime.datetime) -> None:
     global db
+    # Retrieve this bot's API token and the chat ID of the Telegram channel to post messages to:
+    # The strip() is necessary to remove the trailing '\n':
+    with open("api_token.txt", "r") as f:
+        api_token = f.readline().strip()
+    with open("chat_id.txt", "r") as f:
+        chat_id = f.readline().strip()
     meeting_date: str = next_appointment.strftime("%Y-%m-%d")
-    # TODO: Post a new message in Telegram
-    print(f"Am {meeting_day}, dem {meeting_date} findet wieder ein Haxko-Treffen statt.")
+    text_str: str = f"Am {meeting_day}, dem {meeting_date} findet ab 18:00 Uhr wieder ein haxko-Treffen statt. Weitere Informationen unter https://haxko.space.\nThe next haxko meeting will take place on {meeting_day} {meeting_date} from 6 pm. More information at https://haxko.space."
+    url = f"https://api.telegram.org/bot{api_token}/sendMessage?chat_id={chat_id}&text={text_str}"
+    print(requests.get(url).json())
     db["message_written"] = True
-    a = type(db["message_written_date"])
-    print(f"type(db[\"message_written_date\"]) = {a}")
-    print(f"type(today) = {type(today)}")
     db["message_written_date"] = today
 
 def main():
+    # TODO: check_and_write_msg() einmal pro 24 Stunden ausführen.
+    # TODO: Evtl. ideale Uhrzeit für den Post definieren.
     check_and_write_msg()
     db.close()
 

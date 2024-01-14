@@ -1,3 +1,7 @@
+bot_storage
+api_token.txt
+chat_id.txt
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
