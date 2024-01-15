@@ -1,3 +1,4 @@
+import logging
 import shelve
 import datetime
 import requests
@@ -8,15 +9,14 @@ import requests
 MONDAY: int = 0
 FRIDAY: int = 4
 SATURDAY: int = 5
-db: shelve.DbfilenameShelf = shelve.open("bot_storage")
+date_format = "%Y-%m-%d %H:%M:%S"
 
 NOTIFICTAION_PERIOD = 3 # Time period in days from which notification is to be sent
 
 # NOTE: This script can easily be tested by adding or subtracting a timedelta to/from today:
-# NOTE: Before some of the test runs, the file bot_storage must be deleted since its content probably prevents the execution of the program.
-# TODO: Anhand eines Vergleichs des errechneten Meeting-Tages mit dem aktuellen Tag zusätzlich ein "(übermorgen)", "(morgen)" oder "(heute)" ausgeben.
+# NOTE: For some test runs, the file bot_storage must be deleted since its content probably prevents the execution of the program.
 today: datetime.datetime = datetime.datetime.today() + datetime.timedelta(days=10)
-print(f"today = {today}")
+print(f"today = {today.strftime(date_format)}")
 today_weekday: int = today.weekday()
 in_three_days: datetime.datetime = today + datetime.timedelta(days=3)
 curr_week: int = today.isocalendar().week
@@ -27,7 +27,6 @@ def is_even(n: int) -> bool:
 def is_before_friday(day: datetime.datetime) -> bool:
     return day.weekday() <= 4
 
-# Der nur auf den Wochentagen basierende Check sollte auch monats- und jahresübergreifend funktionieren:
 def is_in_notification_period(day: int) -> bool:
     potential_next_appointment_in: int = day - today.weekday()
     potential_next_appointment: datetime.datetime = today + datetime.timedelta(potential_next_appointment_in)
@@ -47,31 +46,28 @@ def is_friday_or_saturday(day: datetime.datetime) -> bool:
     return is_friday(day) or is_saturday(day)
 
 def check_and_write_msg() -> None:
-    global db
-    # Check if message_written and message_written_date exist and create them if not:
+    logger.info("Start checking...")
+    # Check if message_written and message_written_date exist and create them if not (relevant if the script is started for the first time or if bot_storage was deleted):
     if not "message_written" in db:
         db["message_written"]: bool = False
     if not "message_written_date" in db:
         db["message_written_date"]: datetime.datetime = None
-    # Ermögliche, dass nach Ablauf des aktuellen Termins eine Benachrichtigung für den nächsten Termin gesendet werden kann (starte eine neue checking period):
+    # Enable a notification to be sent for the next appointment after the last appointment is over:
     if db["message_written"] is True and db["message_written_date"] is not None and (today - db["message_written_date"]).days > NOTIFICTAION_PERIOD:
-    # and (today - db["message_written_date"]).days > NOTIFICTAION_PERIOD:
         db["message_written"] = False
     # Write a new message if it is to be written:
-    # Check if no message has already been written:
-    if db["message_written"] is False:
+    if db["message_written"] is False: # Check if no message has already been written for the next meeting
         potential_next_appointment_fr: datetime.datetime = is_in_notification_period(FRIDAY)
         potential_next_appointment_sa: datetime.datetime = is_in_notification_period(SATURDAY)
-        # Among other things, it must be checked whether the current time is before the meeting or at least on the same day as the meeting:
+        # Among other things, a post may only be sent if the current time is before the meeting or at least on the same day as the meeting:
         if potential_next_appointment_fr is not None and is_even(curr_week) and today <= potential_next_appointment_fr:
             write_msg("Freitag", potential_next_appointment_fr)
         elif potential_next_appointment_sa is not None and not is_even(curr_week) and today < potential_next_appointment_sa:
             write_msg("Samstag", potential_next_appointment_sa)
 
 def write_msg(meeting_day: str, next_appointment: datetime.datetime) -> None:
-    global db
     # Retrieve this bot's API token and the chat ID of the Telegram channel to post messages to:
-    # The strip() is necessary to remove the trailing '\n':
+    # The strip() is necessary to remove the trailing '\n' delivered by readline():
     with open("api_token.txt", "r") as f:
         api_token = f.readline().strip()
     with open("chat_id.txt", "r") as f:
@@ -80,15 +76,25 @@ def write_msg(meeting_day: str, next_appointment: datetime.datetime) -> None:
     meeting_day_en = "Friday" if meeting_day == "Freitag" else "Saturday"
     text_str: str = f"Am {meeting_day}, dem {meeting_date} findet ab 18:00 Uhr wieder ein haxko-Treffen statt. Weitere Informationen unter https://haxko.space.\nThe next haxko meeting will take place on {meeting_day_en} {meeting_date} from 6 pm. More information at https://haxko.space."
     url = f"https://api.telegram.org/bot{api_token}/sendMessage?chat_id={chat_id}&text={text_str}"
-    print(requests.get(url).json())
+    logger.info("Trying to post reminding message...")
+    logger.info(requests.get(url).json())
     db["message_written"] = True
     db["message_written_date"] = today
 
-def main():
-    # TODO: check_and_write_msg() einmal pro 24 Stunden ausführen.
-    # TODO: Evtl. ideale Uhrzeit für den Post definieren.
+if __name__ == "__main__":
+    # Set up logging to log file haxko_reminder_bot.log and stdout:
+    logger: logging.Logger = logging.getLogger("haxko_reminder_bot")
+    logger.setLevel(logging.INFO)
+    formatter: logging.Formatter = logging.Formatter("%(asctime)s - %(message)s", datefmt=date_format)
+    c_handler: logging.StreamHandler = logging.StreamHandler()
+    c_handler.setLevel(logging.INFO)
+    c_handler.setFormatter(formatter)
+    f_handler: logging.FileHandler = logging.FileHandler("haxko_reminder_bot.log")
+    f_handler.setLevel(logging.INFO)
+    f_handler.setFormatter(formatter)
+    logger.addHandler(c_handler)
+    logger.addHandler(f_handler)
+
+    db: shelve.DbfilenameShelf = shelve.open("bot_storage")
     check_and_write_msg()
     db.close()
-
-if __name__ == "__main__":
-    main()
