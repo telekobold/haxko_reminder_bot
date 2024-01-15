@@ -14,9 +14,9 @@ FILEPATH: str = "/absolute/path/to/this/script/" # and to the other files create
 
 NOTIFICTAION_PERIOD = 3 # Time period in days from which notification is to be sent
 
-# NOTE: This script can easily be tested by adding or subtracting a timedelta to/from today:
+# NOTE: This script can easily be tested by adding or subtracting a timedelta to/from today: (+ datetime.timedelta(days=n))
 # NOTE: For some test runs, the file bot_storage must be deleted since its content probably prevents the execution of the program.
-today: datetime.datetime = datetime.datetime.today() + datetime.timedelta(days=10)
+today: datetime.datetime = datetime.datetime.today()
 print(f"today = {today.strftime(DATE_FORMAT)}")
 today_weekday: int = today.weekday()
 in_three_days: datetime.datetime = today + datetime.timedelta(days=3)
