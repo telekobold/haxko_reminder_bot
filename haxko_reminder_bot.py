@@ -9,14 +9,15 @@ import requests
 MONDAY: int = 0
 FRIDAY: int = 4
 SATURDAY: int = 5
-date_format = "%Y-%m-%d %H:%M:%S"
+DATE_FORMAT: str = "%Y-%m-%d %H:%M:%S"
+FILEPATH: str = "/absolute/path/to/this/script/" # and to the other files created in this script - needed by systemctl timer units
 
 NOTIFICTAION_PERIOD = 3 # Time period in days from which notification is to be sent
 
 # NOTE: This script can easily be tested by adding or subtracting a timedelta to/from today:
 # NOTE: For some test runs, the file bot_storage must be deleted since its content probably prevents the execution of the program.
 today: datetime.datetime = datetime.datetime.today() + datetime.timedelta(days=10)
-print(f"today = {today.strftime(date_format)}")
+print(f"today = {today.strftime(DATE_FORMAT)}")
 today_weekday: int = today.weekday()
 in_three_days: datetime.datetime = today + datetime.timedelta(days=3)
 curr_week: int = today.isocalendar().week
@@ -68,9 +69,9 @@ def check_and_write_msg() -> None:
 def write_msg(meeting_day: str, next_appointment: datetime.datetime) -> None:
     # Retrieve this bot's API token and the chat ID of the Telegram channel to post messages to:
     # The strip() is necessary to remove the trailing '\n' delivered by readline():
-    with open("api_token.txt", "r") as f:
+    with open(FILEPATH + "api_token.txt", "r") as f:
         api_token = f.readline().strip()
-    with open("chat_id.txt", "r") as f:
+    with open(FILEPATH + "chat_id.txt", "r") as f:
         chat_id = f.readline().strip()
     meeting_date: str = next_appointment.strftime("%Y-%m-%d")
     meeting_day_en = "Friday" if meeting_day == "Freitag" else "Saturday"
@@ -85,16 +86,16 @@ if __name__ == "__main__":
     # Set up logging to log file haxko_reminder_bot.log and stdout:
     logger: logging.Logger = logging.getLogger("haxko_reminder_bot")
     logger.setLevel(logging.INFO)
-    formatter: logging.Formatter = logging.Formatter("%(asctime)s - %(message)s", datefmt=date_format)
+    formatter: logging.Formatter = logging.Formatter("%(asctime)s - %(message)s", datefmt=DATE_FORMAT)
     c_handler: logging.StreamHandler = logging.StreamHandler()
     c_handler.setLevel(logging.INFO)
     c_handler.setFormatter(formatter)
-    f_handler: logging.FileHandler = logging.FileHandler("haxko_reminder_bot.log")
+    f_handler: logging.FileHandler = logging.FileHandler(FILEPATH + "haxko_reminder_bot.log")
     f_handler.setLevel(logging.INFO)
     f_handler.setFormatter(formatter)
     logger.addHandler(c_handler)
     logger.addHandler(f_handler)
 
-    db: shelve.DbfilenameShelf = shelve.open("bot_storage")
+    db: shelve.DbfilenameShelf = shelve.open(FILEPATH + "bot_storage")
     check_and_write_msg()
     db.close()
