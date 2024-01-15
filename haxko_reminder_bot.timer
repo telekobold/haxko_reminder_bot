@@ -1,0 +1,10 @@
+[Unit]
+Description=haxko reminder bot timer unit
+
+[Timer]
+OnCalendar=Di-Fr 12,15,18:00:00
+Unit=haxko_reminder_bot.service
+Persistent=true
+
+[Install]
+WantedBy=multi-user.target

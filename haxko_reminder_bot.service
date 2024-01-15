@@ -1,0 +1,11 @@
+[Unit]
+Description=haxko reminder bot service unit
+
+[Service]
+Type=simple
+# Replace user with the actual user:
+User=user
+ExecStart=/usr/bin/python3 /home/user/haxko_reminder_bot/haxko_reminder_bot.py
+
+[Install]
+WantedBy=multi-user.target
