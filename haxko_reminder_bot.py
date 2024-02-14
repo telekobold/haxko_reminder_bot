@@ -1,12 +1,11 @@
 import logging
 import shelve
-import datetime
+from datetime import datetime
 import requests
 
 # This bot is written in such a way that it also works if it didn't run for any period of time.
-# Caution: datetime.datetime.today().weekday() returns values between 0 and 6, while datetime.datetime.today.day() returns values starting from 1.
+# Caution: datetime.today().weekday() returns values between 0 and 6, while datetime.today.day() returns values starting from 1.
 
-MONDAY: int = 0
 FRIDAY: int = 4
 SATURDAY: int = 5
 DATE_FORMAT: str = "%Y-%m-%d %H:%M:%S"
@@ -16,34 +15,31 @@ NOTIFICTAION_PERIOD = 3 # Time period in days from which notification is to be s
 
 # NOTE: This script can easily be tested by adding or subtracting a timedelta to/from today: (+ datetime.timedelta(days=n))
 # NOTE: For some test runs, the file bot_storage must be deleted since its content probably prevents the execution of the program.
-today: datetime.datetime = datetime.datetime.today()
+today: datetime = datetime.today()
 print(f"today = {today.strftime(DATE_FORMAT)}")
 today_weekday: int = today.weekday()
-in_three_days: datetime.datetime = today + datetime.timedelta(days=3)
+in_three_days: datetime = today + datetime.timedelta(days=3)
 curr_week: int = today.isocalendar().week
 
 def is_even(n: int) -> bool:
     return n % 2 == 0
 
-def is_before_friday(day: datetime.datetime) -> bool:
-    return day.weekday() <= 4
-
 def is_in_notification_period(day: int) -> bool:
     potential_next_appointment_in: int = day - today.weekday()
-    potential_next_appointment: datetime.datetime = today + datetime.timedelta(potential_next_appointment_in)
+    potential_next_appointment: datetime = today + datetime.timedelta(potential_next_appointment_in)
     if day == FRIDAY and potential_next_appointment_in <= NOTIFICTAION_PERIOD and is_friday(potential_next_appointment):
         return potential_next_appointment
     elif day == SATURDAY and potential_next_appointment_in <= NOTIFICTAION_PERIOD and is_saturday(potential_next_appointment):
         return potential_next_appointment
     return None
 
-def is_friday(day: datetime.datetime) -> bool:
+def is_friday(day: datetime) -> bool:
     return day.weekday() is FRIDAY
 
-def is_saturday(day: datetime.datetime) -> bool:
+def is_saturday(day: datetime) -> bool:
     return day.weekday() is SATURDAY
 
-def is_friday_or_saturday(day: datetime.datetime) -> bool:
+def is_friday_or_saturday(day: datetime) -> bool:
     return is_friday(day) or is_saturday(day)
 
 def check_and_write_msg() -> None:
@@ -52,21 +48,21 @@ def check_and_write_msg() -> None:
     if not "message_written" in db:
         db["message_written"]: bool = False
     if not "message_written_date" in db:
-        db["message_written_date"]: datetime.datetime = None
+        db["message_written_date"]: datetime = None
     # Enable a notification to be sent for the next appointment after the last appointment is over:
     if db["message_written"] is True and db["message_written_date"] is not None and (today - db["message_written_date"]).days > NOTIFICTAION_PERIOD:
         db["message_written"] = False
     # Write a new message if it is to be written:
     if db["message_written"] is False: # Check if no message has already been written for the next meeting
-        potential_next_appointment_fr: datetime.datetime = is_in_notification_period(FRIDAY)
-        potential_next_appointment_sa: datetime.datetime = is_in_notification_period(SATURDAY)
+        potential_next_appointment_fr: datetime = is_in_notification_period(FRIDAY)
+        potential_next_appointment_sa: datetime = is_in_notification_period(SATURDAY)
         # Among other things, a post may only be sent if the current time is before the meeting or at least on the same day as the meeting:
         if potential_next_appointment_fr is not None and is_even(curr_week) and today <= potential_next_appointment_fr:
             write_msg("Freitag", potential_next_appointment_fr)
         elif potential_next_appointment_sa is not None and not is_even(curr_week) and today < potential_next_appointment_sa:
             write_msg("Samstag", potential_next_appointment_sa)
 
-def write_msg(meeting_day: str, next_appointment: datetime.datetime) -> None:
+def write_msg(meeting_day: str, next_appointment: datetime) -> None:
     # Retrieve this bot's API token and the chat ID of the Telegram channel to post messages to:
     # The strip() is necessary to remove the trailing '\n' delivered by readline():
     with open(FILEPATH + "api_token.txt", "r") as f:
