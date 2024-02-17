@@ -39,9 +39,6 @@ def is_friday(day: datetime) -> bool:
 def is_saturday(day: datetime) -> bool:
     return day.weekday() is SATURDAY
 
-def is_friday_or_saturday(day: datetime) -> bool:
-    return is_friday(day) or is_saturday(day)
-
 def check_and_write_msg() -> None:
     logger.info("Start checking...")
     # Check if message_written and message_written_date exist and create them if not (relevant if the script is started for the first time or if bot_storage was deleted):
